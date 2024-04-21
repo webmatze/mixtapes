@@ -17,6 +17,8 @@
     <div id="app">
         <div id="spotifyCredentials" v-if="showSpotifyCredentials">
             <h2>Spotify API Credentials</h2>
+            <p>Your Spotify credentials are not saved on our server and are only used on this client.</p>
+            <p>You can create your own credentials here: <a href="https://developer.spotify.com/dashboard">https://developer.spotify.com/dashboard</a></p>
             <div>
                 <label for="clientID">Client ID:</label>
                 <input type="text" id="clientID" v-model="clientID" placeholder="Enter Client ID">
@@ -46,7 +48,7 @@
                     <div>Remaining: {{ formattedTime(remainingTimeA) }}</div>
                     <ul>
                         <li v-for="song in sideA" :key="song.id" class="song-details">
-                            {{ song.title }} by {{ song.artist }} - {{ formattedTime(song.duration) }}
+                            {{ song.name }} by {{ song.artists[0].name }} - {{ formattedTime(song.duration_ms / 1000) }}
                             <button @click="removeSong('A', song)">Remove</button>
                             <button @click="moveSong('B', song)">Move to B</button>
                         </li>
@@ -57,7 +59,7 @@
                     <div>Remaining: {{ formattedTime(remainingTimeB) }}</div>
                     <ul>
                         <li v-for="song in sideB" :key="song.id" class="song-details">
-                            {{ song.title }} by {{ song.artist }} - {{ formattedTime(song.duration) }}
+                            {{ song.name }} by {{ song.artists[0].name }} - {{ formattedTime(song.duration_ms / 1000) }}
                             <button @click="removeSong('B', song)">Remove</button>
                             <button @click="moveSong('A', song)">Move to A</button>
                         </li>
@@ -69,7 +71,7 @@
                 <button @click="searchSongs">Search</button>
                 <ul>
                     <li v-for="song in searchResults" :key="song.id" class="song">
-                        {{ song.title }} ({{ song.id}}) by {{ song.artist }} - {{ formattedTime(song.duration) }}
+                        {{ song.name }} ({{song.album.name}}) by {{ song.artists[0].name }} - {{ formattedTime(song.duration_ms / 1000) }}
                         <button @click="addSong('A', song)">Add to Side A</button>
                         <button @click="addSong('B', song)">Add to Side B</button>
                     </li>
@@ -79,11 +81,10 @@
     </div>
 
     <script>
-        const { createApp, ref } = Vue;
+        const { createApp, ref, watch } = Vue;
 
         createApp({
             setup() {
-                const showSpotifyCredentials = ref(true);
                 const mixtapeLength = ref(3600);
                 const remainingTimeA = ref(mixtapeLength.value / 2);
                 const remainingTimeB = ref(mixtapeLength.value / 2);
@@ -92,39 +93,80 @@
                 const sideB = ref([]);
                 const searchQuery = ref('');
                 const searchResults = ref([]);
-                const clientID = ref('');
-                const clientSecret = ref('');
+                const clientID = ref(localStorage.getItem('clientID') || '');
+                const clientSecret = ref(localStorage.getItem('clientSecret') || '');
 
-                const songs = [
-                    { id: 1, title: "Song 1", artist: "Artist 1", duration: 210 },
-                    { id: 2, title: "Song 2", artist: "Artist 2", duration: 190 },
-                    { id: 3, title: "Song 3", artist: "Artist 3", duration: 240 }
-                ];
+                watch(clientID, (newValue) => {
+                    localStorage.setItem('clientID', newValue);
+                });
+
+                watch(clientSecret, (newValue) => {
+                    localStorage.setItem('clientSecret', newValue);
+                });
+                const accessToken = ref('');
+                const songs = ref([]);
+                const showSpotifyCredentials = ref(clientID.value.trim() === '' && clientSecret.value.trim() === '');
+
+                if (showSpotifyCredentials.value === false) {
+                    getSpotifyAccessToken();
+                }
 
                 function saveSpotifyCredentials() {
                     if (clientID.value.trim() !== '' && clientSecret.value.trim() !== '') {
-                        showSpotifyCredentials.value = false;
-                        // Here you could also add logic to securely store the credentials
-                        // For example, sending them to a backend server for safekeeping
-                        console.log("Spotify credentials saved successfully.");
+                        getSpotifyAccessToken();
                     } else {
                         alert("Please enter both Client ID and Client Secret.");
                     }
                 }
 
+                function getSpotifyAccessToken() {
+                    const token = btoa(`${clientID.value.trim()}:${clientSecret.value.trim()}`);
+
+                    // get a spotify access token
+                    fetch('https://accounts.spotify.com/api/token', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'Authorization': `Basic ${token}`
+                        },
+                        body: 'grant_type=client_credentials'
+                    })
+                        .then(response => {
+                            if (!response.ok && response.status === 400) {
+                                throw new Error('Bad Request: Make sure your client credentials are correct.');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            accessToken.value = data.access_token;
+                            console.log('Token:', data.access_token);
+                            showSpotifyCredentials.value = false;
+                        })
+                        .catch(error => alert(error));
+
+                    console.log("Spotify credentials saved successfully.");
+                }
+
                 function searchSongs() {
-                    searchResults.value = songs.filter(song =>
-                        song.title.toLowerCase().includes(searchQuery.value.toLowerCase())
-                    );
+                    fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery.value)}&type=track`, {
+                        method: 'GET',
+                        headers: { 'Authorization': `Bearer ${accessToken.value}` }
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            searchResults.value = data.tracks.items;
+                            console.log('Search Results:', data.tracks.items)
+                        })
+                        .catch(error => console.error('Error:', error));
                 }
 
                 function addSong(side, song) {
-                    if (side === 'A' && remainingTimeA.value >= song.duration) {
+                    if (side === 'A' && remainingTimeA.value >= song.duration_ms / 1000) {
                         sideA.value.push(song);
-                        remainingTimeA.value -= song.duration;
-                    } else if (side === 'B' && remainingTimeB.value >= song.duration) {
+                        remainingTimeA.value -= song.duration_ms / 1000;
+                    } else if (side === 'B' && remainingTimeB.value >= song.duration_ms / 1000) {
                         sideB.value.push(song);
-                        remainingTimeB.value -= song.duration;
+                        remainingTimeB.value -= song.duration_ms / 1000;
                     } else {
                         alert(`Cannot add "${song.title}" to Side ${side}. Not enough remaining time.`);
                     }
@@ -136,13 +178,13 @@
                         if (index !== -1) {
                             sideA.value.splice(index, 1);
                         }
-                        remainingTimeA.value += song.duration;
+                        remainingTimeA.value += song.duration_ms / 1000;
                     } else {
                         const index = sideB.value.findIndex(s => s.id === song.id);
                         if (index !== -1) {
                             sideB.value.splice(index, 1);
                         }
-                        remainingTimeB.value += song.duration;
+                        remainingTimeB.value += song.duration_ms / 1000;
                     }
                 }
 
@@ -152,6 +194,7 @@
                 }
 
                 function formattedTime(seconds) {
+                    seconds = Math.round(seconds);
                     const min = Math.floor(seconds / 60);
                     const sec = seconds % 60;
                     return `${min}:${sec.toString().padStart(2, '0')}`;
