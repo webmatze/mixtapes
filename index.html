@@ -15,52 +15,66 @@
 </head>
 <body>
     <div id="app">
-        <h1>Mixtape Creator</h1>
-        <label for="mixtape-length">Select Mixtape Length:</label>
-        <select v-model="mixtapeLength" @change="updateRemainingTime">
-            <option value="3600">60 minutes</option>
-            <option value="5400">90 minutes</option>
-            <option value="6000">100 minutes</option>
-            <option value="7200">120 minutes</option>
-        </select>
-        <div>
-            <label for="mixtape-title">Mixtape Title:</label>
-            <input type="text" id="mixtape-title" v-model="mixtapeTitle" placeholder="Enter Mixtape Title">
+        <div id="spotifyCredentials" v-if="showSpotifyCredentials">
+            <h2>Spotify API Credentials</h2>
+            <div>
+                <label for="clientID">Client ID:</label>
+                <input type="text" id="clientID" v-model="clientID" placeholder="Enter Client ID">
+            </div>
+            <div>
+                <label for="clientSecret">Client Secret:</label>
+                <input type="text" id="clientSecret" v-model="clientSecret" placeholder="Enter Client Secret">
+            </div>
+            <button @click="saveSpotifyCredentials">Save Credentials</button>
         </div>
-        <div class="container">
-            <div class="side">
-                <h2>Side A</h2>
-                <div>Remaining: {{ formattedTime(remainingTimeA) }}</div>
+        <div id="mixtape" v-else>
+            <h1>Mixtape Creator</h1>
+            <label for="mixtape-length">Select Mixtape Length:</label>
+            <select v-model="mixtapeLength" @change="updateRemainingTime">
+                <option value="3600">60 minutes</option>
+                <option value="5400">90 minutes</option>
+                <option value="6000">100 minutes</option>
+                <option value="7200">120 minutes</option>
+            </select>
+            <div>
+                <label for="mixtape-title">Mixtape Title:</label>
+                <input type="text" id="mixtape-title" v-model="mixtapeTitle" placeholder="Enter Mixtape Title">
+            </div>
+            <div class="container">
+                <div class="side">
+                    <h2>Side A</h2>
+                    <div>Remaining: {{ formattedTime(remainingTimeA) }}</div>
+                    <ul>
+                        <li v-for="song in sideA" :key="song.id" class="song-details">
+                            {{ song.title }} by {{ song.artist }} - {{ formattedTime(song.duration) }}
+                            <button @click="removeSong('A', song)">Remove</button>
+                            <button @click="moveSong('B', song)">Move to B</button>
+                        </li>
+                    </ul>
+                </div>
+                <div class="side">
+                    <h2>Side B</h2>
+                    <div>Remaining: {{ formattedTime(remainingTimeB) }}</div>
+                    <ul>
+                        <li v-for="song in sideB" :key="song.id" class="song-details">
+                            {{ song.title }} by {{ song.artist }} - {{ formattedTime(song.duration) }}
+                            <button @click="removeSong('B', song)">Remove</button>
+                            <button @click="moveSong('A', song)">Move to A</button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div>
+                <input type="text" v-model="searchQuery" placeholder="Search for songs">
+                <button @click="searchSongs">Search</button>
                 <ul>
-                    <li v-for="song in sideA" :key="song.id" class="song-details">
-                        {{ song.title }} by {{ song.artist }} - {{ formattedTime(song.duration) }}
-                        <button @click="removeSong('A', song)">Remove</button>
-                        <button @click="moveSong('B', song)">Move to B</button>
+                    <li v-for="song in searchResults" :key="song.id" class="song">
+                        {{ song.title }} ({{ song.id}}) by {{ song.artist }} - {{ formattedTime(song.duration) }}
+                        <button @click="addSong('A', song)">Add to Side A</button>
+                        <button @click="addSong('B', song)">Add to Side B</button>
                     </li>
                 </ul>
             </div>
-            <div class="side">
-                <h2>Side B</h2>
-                <div>Remaining: {{ formattedTime(remainingTimeB) }}</div>
-                <ul>
-                    <li v-for="song in sideB" :key="song.id" class="song-details">
-                        {{ song.title }} by {{ song.artist }} - {{ formattedTime(song.duration) }}
-                        <button @click="removeSong('B', song)">Remove</button>
-                        <button @click="moveSong('A', song)">Move to A</button>
-                    </li>
-                </ul>
-            </div>
-        </div>
-        <div>
-            <input type="text" v-model="searchQuery" placeholder="Search for songs">
-            <button @click="searchSongs">Search</button>
-            <ul>
-                <li v-for="song in searchResults" :key="song.id" class="song">
-                    {{ song.title }} ({{ song.id}}) by {{ song.artist }} - {{ formattedTime(song.duration) }}
-                    <button @click="addSong('A', song)">Add to Side A</button>
-                    <button @click="addSong('B', song)">Add to Side B</button>
-                </li>
-            </ul>
         </div>
     </div>
 
@@ -69,6 +83,7 @@
 
         createApp({
             setup() {
+                const showSpotifyCredentials = ref(true);
                 const mixtapeLength = ref(3600);
                 const remainingTimeA = ref(mixtapeLength.value / 2);
                 const remainingTimeB = ref(mixtapeLength.value / 2);
@@ -77,12 +92,25 @@
                 const sideB = ref([]);
                 const searchQuery = ref('');
                 const searchResults = ref([]);
+                const clientID = ref('');
+                const clientSecret = ref('');
 
                 const songs = [
                     { id: 1, title: "Song 1", artist: "Artist 1", duration: 210 },
                     { id: 2, title: "Song 2", artist: "Artist 2", duration: 190 },
                     { id: 3, title: "Song 3", artist: "Artist 3", duration: 240 }
                 ];
+
+                function saveSpotifyCredentials() {
+                    if (clientID.value.trim() !== '' && clientSecret.value.trim() !== '') {
+                        showSpotifyCredentials.value = false;
+                        // Here you could also add logic to securely store the credentials
+                        // For example, sending them to a backend server for safekeeping
+                        console.log("Spotify credentials saved successfully.");
+                    } else {
+                        alert("Please enter both Client ID and Client Secret.");
+                    }
+                }
 
                 function searchSongs() {
                     searchResults.value = songs.filter(song =>
@@ -136,7 +164,7 @@
                     sideB.value = [];
                 }
 
-                return { mixtapeLength, remainingTimeA, remainingTimeB, sideA, sideB, searchQuery, searchResults, addSong, removeSong, moveSong, searchSongs, formattedTime, updateRemainingTime };
+                return { showSpotifyCredentials, clientID, clientSecret, mixtapeLength, mixtapeTitle, remainingTimeA, remainingTimeB, sideA, sideB, searchQuery, searchResults, saveSpotifyCredentials, addSong, removeSong, moveSong, searchSongs, formattedTime, updateRemainingTime };
             }
         }).mount('#app');
     </script>
