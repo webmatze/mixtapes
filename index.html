@@ -58,13 +58,12 @@
                         <div class="column is-half">
                             <div class="box">
                                 <h2 class="title is-5">Side A</h2>
-                                <div>Remaining: {{ formattedTime(remainingTimeA) }}</div>
+                                <div class="block">Remaining: <span class="tag is-info">{{ formattedTime(remainingTimeA) }}</span></div>
                                 <ul>
                                     <li v-for="song in sideA" :key="song.id" class="song-details">
                                         <div class="columns">
                                             <div class="column">
-                                                {{ song.name }} by {{ song.artists[0].name }} <span class="tag is-info is-light">{{
-                                                    formattedTime(song.duration_ms / 1000) }}</span>
+                                                {{ song.name }} by {{ song.artists[0].name }} <span class="tag is-info is-light">{{ formattedTime(song.duration_ms / 1000) }}</span>
                                             </div>
                                             <div class="column is-narrow">
                                                 <div class="buttons are-small">
@@ -84,7 +83,7 @@
                         <div class="column is-half">
                             <div class="box">
                                 <h2 class="title is-5">Side B</h2>
-                                <div>Remaining: {{ formattedTime(remainingTimeB) }}</div>
+                                <div class="block">Remaining: <span class="tag is-info">{{ formattedTime(remainingTimeB) }}</span></div>
                                 <ul>
                                     <li v-for="song in sideB" :key="song.id" class="song-details">
                                         <div class="columns">
@@ -107,6 +106,7 @@
                             </div>
                         </div>
                     </div>
+                    <label class="label is-medium">Add songs to your mixtape</label>
                     <div class="field has-addons">
                         <div class="control is-expanded">
                             <input class="input" type="text" v-model="searchQuery" placeholder="Search for songs">
