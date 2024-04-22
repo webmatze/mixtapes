@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vue Mixtape Creator</title>
+    <title>Mixtape Creator</title>
     <script src="https://unpkg.com/vue@3.4.23/dist/vue.global.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/1.0.0/css/bulma.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
@@ -61,14 +61,21 @@
                                 <div>Remaining: {{ formattedTime(remainingTimeA) }}</div>
                                 <ul>
                                     <li v-for="song in sideA" :key="song.id" class="song-details">
-                                        {{ song.name }} by {{ song.artists[0].name }} <span class="tag is-info is-light">{{ formattedTime(song.duration_ms / 1000) }}</span>
-                                        <div class="buttons are-small">
-                                            <button class="button is-small is-danger is-outlined" @click="removeSong('A', song)">
-                                                <span class="icon"><i class="fa fa-times"></i></span> <span>Remove</span>
-                                            </button>
-                                            <button class="button is-small is-info" @click="moveSong('B', song)">
-                                                <span class="icon"><i class="fas fa-arrow-right"></i></span> <span>Move to B</span>
-                                            </button>
+                                        <div class="columns">
+                                            <div class="column">
+                                                {{ song.name }} by {{ song.artists[0].name }} <span class="tag is-info is-light">{{
+                                                    formattedTime(song.duration_ms / 1000) }}</span>
+                                            </div>
+                                            <div class="column is-narrow">
+                                                <div class="buttons are-small">
+                                                    <button class="button is-small is-danger is-outlined" @click="removeSong('A', song)">
+                                                        <span class="icon"><i class="fa fa-times"></i></span> <span>Remove</span>
+                                                    </button>
+                                                    <button class="button is-small is-info" @click="moveSong('B', song)">
+                                                        <span class="icon"><i class="fas fa-arrow-right"></i></span> <span>Move to B</span>
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </li>
                                 </ul>
@@ -80,14 +87,20 @@
                                 <div>Remaining: {{ formattedTime(remainingTimeB) }}</div>
                                 <ul>
                                     <li v-for="song in sideB" :key="song.id" class="song-details">
-                                        {{ song.name }} by {{ song.artists[0].name }} <span class="tag is-info is-light">{{ formattedTime(song.duration_ms / 1000) }}</span>
-                                        <div class="buttons are-small">
-                                            <button class="button is-small is-danger is-outlined" @click="removeSong('B', song)">
-                                                <span class="icon"><i class="fa fa-times"></i></span> <span>Remove</span>
-                                            </button>
-                                            <button class="button is-small is-info" @click="moveSong('A', song)">
-                                                <span class="icon"><i class="fas fa-arrow-left"></i></span> <span>Move to A</span>
-                                            </button>
+                                        <div class="columns">
+                                            <div class="column">
+                                                {{ song.name }} by {{ song.artists[0].name }} <span class="tag is-info is-light">{{ formattedTime(song.duration_ms / 1000) }}</span>
+                                            </div>
+                                            <div class="column is-narrow">
+                                                <div class="buttons are-small">
+                                                    <button class="button is-small is-danger is-outlined" @click="removeSong('B', song)">
+                                                        <span class="icon"><i class="fa fa-times"></i></span> <span>Remove</span>
+                                                    </button>
+                                                    <button class="button is-small is-info" @click="moveSong('A', song)">
+                                                        <span class="icon"><i class="fas fa-arrow-left"></i></span> <span>Move to A</span>
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </li>
                                 </ul>
@@ -104,9 +117,17 @@
                     </div>
                     <ul>
                         <li v-for="song in searchResults" :key="song.id" class="song">
-                            {{ song.name }} ({{song.album.name}}) by {{ song.artists[0].name }} - {{ formattedTime(song.duration_ms / 1000) }}
-                            <button class="button is-small is-success" @click="addSong('A', song)">Add to Side A</button>
-                            <button class="button is-small is-success" @click="addSong('B', song)">Add to Side B</button>
+                            <div class="columns">
+                                <div class="column">
+                                    {{ song.name }} ({{song.album.name}}) by {{ song.artists[0].name }} <span class="tag is-info is-light">{{ formattedTime(song.duration_ms / 1000) }}</span>
+                                </div>
+                                <div class="column">
+                                    <div class="buttons">
+                                        <button class="button is-small is-success" @click="addSong('A', song)">Add to Side A</button>
+                                        <button class="button is-small is-success" @click="addSong('B', song)">Add to Side B</button>
+                                    </div>
+                                </div>
+                            </div>
                         </li>
                     </ul>
                 </div>
@@ -202,7 +223,7 @@
                         sideB.value.push(song);
                         remainingTimeB.value -= song.duration_ms / 1000;
                     } else {
-                        alert(`Cannot add "${song.title}" to Side ${side}. Not enough remaining time.`);
+                        alert(`Cannot add "${song.name}" to Side ${side}. Not enough remaining time.`);
                     }
                 }
 
