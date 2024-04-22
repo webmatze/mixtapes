@@ -6,6 +6,7 @@
     <title>Vue Mixtape Creator</title>
     <script src="https://unpkg.com/vue@3.4.23/dist/vue.global.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/1.0.0/css/bulma.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <style>
         /* This style element is for extra CSS */
     </style>
@@ -60,9 +61,15 @@
                                 <div>Remaining: {{ formattedTime(remainingTimeA) }}</div>
                                 <ul>
                                     <li v-for="song in sideA" :key="song.id" class="song-details">
-                                        {{ song.name }} by {{ song.artists[0].name }} - {{ formattedTime(song.duration_ms / 1000) }}
-                                        <button class="button is-small is-danger" @click="removeSong('A', song)">Remove</button>
-                                        <button class="button is-small is-info" @click="moveSong('B', song)">Move to B</button>
+                                        {{ song.name }} by {{ song.artists[0].name }} <span class="tag is-info is-light">{{ formattedTime(song.duration_ms / 1000) }}</span>
+                                        <div class="buttons are-small">
+                                            <button class="button is-small is-danger is-outlined" @click="removeSong('A', song)">
+                                                <span class="icon"><i class="fa fa-times"></i></span> <span>Remove</span>
+                                            </button>
+                                            <button class="button is-small is-info" @click="moveSong('B', song)">
+                                                <span class="icon"><i class="fas fa-arrow-right"></i></span> <span>Move to B</span>
+                                            </button>
+                                        </div>
                                     </li>
                                 </ul>
                             </div>
@@ -73,9 +80,15 @@
                                 <div>Remaining: {{ formattedTime(remainingTimeB) }}</div>
                                 <ul>
                                     <li v-for="song in sideB" :key="song.id" class="song-details">
-                                        {{ song.name }} by {{ song.artists[0].name }} - {{ formattedTime(song.duration_ms / 1000) }}
-                                        <button class="button is-small is-danger" @click="removeSong('B', song)">Remove</button>
-                                        <button class="button is-small is-info" @click="moveSong('A', song)">Move to A</button>
+                                        {{ song.name }} by {{ song.artists[0].name }} <span class="tag is-info is-light">{{ formattedTime(song.duration_ms / 1000) }}</span>
+                                        <div class="buttons are-small">
+                                            <button class="button is-small is-danger is-outlined" @click="removeSong('B', song)">
+                                                <span class="icon"><i class="fa fa-times"></i></span> <span>Remove</span>
+                                            </button>
+                                            <button class="button is-small is-info" @click="moveSong('A', song)">
+                                                <span class="icon"><i class="fas fa-arrow-left"></i></span> <span>Move to A</span>
+                                            </button>
+                                        </div>
                                     </li>
                                 </ul>
                             </div>
