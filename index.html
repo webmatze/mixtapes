@@ -224,7 +224,9 @@
                         remainingTimeB.value -= song.duration_ms / 1000;
                     } else {
                         alert(`Cannot add "${song.name}" to Side ${side}. Not enough remaining time.`);
+                        return false;
                     }
+                    return true;
                 }
 
                 function removeSong(side, song) {
@@ -244,8 +246,10 @@
                 }
 
                 function moveSong(targetSide, song) {
-                    removeSong(targetSide === 'A' ? 'B' : 'A', song);
-                    addSong(targetSide, song);
+                    const success = addSong(targetSide, song);
+                    if (success) {
+                        removeSong(targetSide === 'A' ? 'B' : 'A', song);
+                    }
                 }
 
                 function formattedTime(seconds) {
