@@ -16,22 +16,13 @@
         <div class="container">
             <div id="app">
                 <div id="spotifyCredentials" v-if="showSpotifyCredentials" class="box">
-                    <h2 class="title is-4">Spotify API Credentials</h2>
-                    <p>Your Spotify credentials are not saved on our server and are only used on this client.</p>
-                    <p>You can create your own credentials here: <a href="https://developer.spotify.com/dashboard">https://developer.spotify.com/dashboard</a></p>
+                    <h2 class="title is-4">Allow Access to Spotify</h2>
+                    <p class="block">In order to be able to search for songs and create a mixtape playlist you need to grant access to your spotify account.</p>
                     <div class="field">
-                        <label for="clientID" class="label">Client ID:</label>
                         <div class="control">
-                            <input class="input" type="text" id="clientID" v-model="clientID" placeholder="Enter Client ID">
+                            <button class="button is-link" @click="loginWithSpotify">Login with Spotify</button>
                         </div>
                     </div>
-                    <div class="field">
-                        <label for="clientSecret" class="label">Client Secret:</label>
-                        <div class="control">
-                            <input class="input" type="text" id="clientSecret" v-model="clientSecret" placeholder="Enter Client Secret">
-                        </div>
-                    </div>
-                    <button class="button is-link" @click="saveSpotifyCredentials">Save Credentials</button>
                 </div>
                 <div id="mixtape" v-else>
                     <h1 class="title">Mixtape Creator</h1>
@@ -145,6 +136,33 @@
 
         createApp({
             setup() {
+                // authorization
+                const clientId = 'ce6afc8d146f440785acdb00ee2e4013';
+                const authorizationEndpoint = "https://accounts.spotify.com/authorize";
+                const tokenEndpoint = "https://accounts.spotify.com/api/token";
+                const scope = 'user-read-private user-read-email playlist-modify-private playlist-modify-public';
+                const redirectUrl = window.location.href.split('?')[0];
+
+                // Data structure that manages the current active token, caching it in localStorage
+                const currentToken = {
+                    get access_token() { return localStorage.getItem('access_token') || null; },
+                    get refresh_token() { return localStorage.getItem('refresh_token') || null; },
+                    get expires_in() { return localStorage.getItem('refresh_in') || null },
+                    get expires() { return localStorage.getItem('expires') || null },
+
+                    save: function (response) {
+                        const { access_token, refresh_token, expires_in } = response;
+                        localStorage.setItem('access_token', access_token);
+                        localStorage.setItem('refresh_token', refresh_token);
+                        localStorage.setItem('expires_in', expires_in);
+
+                        const now = new Date();
+                        const expiry = new Date(now.getTime() + (expires_in * 1000));
+                        localStorage.setItem('expires', expiry);
+                    }
+                };
+
+                // app data
                 const mixtapeLength = ref(3600);
                 const remainingTimeA = ref(mixtapeLength.value / 2);
                 const remainingTimeB = ref(mixtapeLength.value / 2);
@@ -153,64 +171,107 @@
                 const sideB = ref([]);
                 const searchQuery = ref('');
                 const searchResults = ref([]);
-                const clientID = ref(localStorage.getItem('clientID') || '');
-                const clientSecret = ref(localStorage.getItem('clientSecret') || '');
 
-                watch(clientID, (newValue) => {
-                    localStorage.setItem('clientID', newValue);
-                });
-
-                watch(clientSecret, (newValue) => {
-                    localStorage.setItem('clientSecret', newValue);
-                });
                 const accessToken = ref('');
                 const songs = ref([]);
-                const showSpotifyCredentials = ref(clientID.value.trim() === '' && clientSecret.value.trim() === '');
+                const showSpotifyCredentials = ref(!currentToken.access_token);
 
-                if (showSpotifyCredentials.value === false) {
-                    getSpotifyAccessToken();
+                async function loginWithSpotify() {
+                    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                    const randomValues = crypto.getRandomValues(new Uint8Array(64));
+                    const randomString = randomValues.reduce((acc, x) => acc + possible[x % possible.length], "");
+
+                    const code_verifier = randomString;
+                    const data = new TextEncoder().encode(code_verifier);
+                    const hashed = await crypto.subtle.digest('SHA-256', data);
+
+                    const code_challenge_base64 = btoa(String.fromCharCode(...new Uint8Array(hashed)))
+                        .replace(/=/g, '')
+                        .replace(/\+/g, '-')
+                        .replace(/\//g, '_');
+
+                    window.localStorage.setItem('code_verifier', code_verifier);
+
+                    const authUrl = new URL(authorizationEndpoint)
+                    const params = {
+                        response_type: 'code',
+                        client_id: clientId,
+                        scope: scope,
+                        code_challenge_method: 'S256',
+                        code_challenge: code_challenge_base64,
+                        redirect_uri: redirectUrl,
+                    };
+
+                    authUrl.search = new URLSearchParams(params).toString();
+                    window.location.href = authUrl.toString(); // Redirect the user to the authorization server for login
                 }
 
-                function saveSpotifyCredentials() {
-                    if (clientID.value.trim() !== '' && clientSecret.value.trim() !== '') {
-                        getSpotifyAccessToken();
-                    } else {
-                        alert("Please enter both Client ID and Client Secret.");
+                async function checkCallback() {
+                    // On page load, try to fetch auth code from current browser search URL
+                    const args = new URLSearchParams(window.location.search);
+                    const code = args.get('code');
+
+                    // If we find a code, we're in a callback, do a token exchange
+                    if (code) {
+                        const token = await getToken(code);
+                        currentToken.save(token);
+
+                        // Remove code from URL so we can refresh correctly.
+                        const url = new URL(window.location.href);
+                        url.searchParams.delete("code");
+
+                        const updatedUrl = url.search ? url.href : url.href.replace('?', '');
+                        window.history.replaceState({}, document.title, updatedUrl);
+                    }
+
+                    // If we have a token, we're logged in, so fetch user data and render logged in template
+                    if (currentToken.access_token) {
+                        showSpotifyCredentials.value = false;
                     }
                 }
+                checkCallback();
 
-                function getSpotifyAccessToken() {
-                    const token = btoa(`${clientID.value.trim()}:${clientSecret.value.trim()}`);
+                // Soptify API Calls
+                async function getToken(code) {
+                    const code_verifier = localStorage.getItem('code_verifier');
 
-                    // get a spotify access token
-                    fetch('https://accounts.spotify.com/api/token', {
+                    const response = await fetch(tokenEndpoint, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded',
-                            'Authorization': `Basic ${token}`
                         },
-                        body: 'grant_type=client_credentials'
-                    })
-                        .then(response => {
-                            if (!response.ok && response.status === 400) {
-                                throw new Error('Bad Request: Make sure your client credentials are correct.');
-                            }
-                            return response.json();
-                        })
-                        .then(data => {
-                            accessToken.value = data.access_token;
-                            console.log('Token:', data.access_token);
-                            showSpotifyCredentials.value = false;
-                        })
-                        .catch(error => alert(error));
+                        body: new URLSearchParams({
+                            client_id: clientId,
+                            grant_type: 'authorization_code',
+                            code: code,
+                            redirect_uri: redirectUrl,
+                            code_verifier: code_verifier,
+                        }),
+                    });
 
-                    console.log("Spotify credentials saved successfully.");
+                    return await response.json();
+                }
+
+                async function refreshToken() {
+                    const response = await fetch(tokenEndpoint, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: new URLSearchParams({
+                            client_id: clientId,
+                            grant_type: 'refresh_token',
+                            refresh_token: currentToken.refresh_token
+                        }),
+                    });
+
+                    return await response.json();
                 }
 
                 async function fetchWebApi(endpoint, method, body) {
                     const res = await fetch(`https://api.spotify.com/${endpoint}`, {
                         headers: {
-                            Authorization: `Bearer ${accessToken.value}`,
+                            Authorization: `Bearer ${currentToken.access_token}`,
                         },
                         method,
                         body: JSON.stringify(body)
@@ -221,7 +282,7 @@
                 function searchSongs() {
                     fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery.value)}&type=track`, {
                         method: 'GET',
-                        headers: { 'Authorization': `Bearer ${accessToken.value}` }
+                        headers: { 'Authorization': `Bearer ${currentToken.access_token}` }
                     })
                         .then(response => response.json())
                         .then(data => {
@@ -237,7 +298,7 @@
                     const { id: user_id } = await fetchWebApi('v1/me', 'GET')
 
                     for (const name of playlistNames) {
-                        const playlist = await fetchWebApi('v1/users/${user_id}/playlists', 'POST', {
+                        const playlist = await fetchWebApi(`v1/users/${user_id}/playlists`, 'POST', {
                             name: name,
                             description: 'Generated by Mixtape Creator',
                             public: false
@@ -257,7 +318,7 @@
                     await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
                         method: 'POST',
                         headers: {
-                            'Authorization': `Bearer ${accessToken.value}`,
+                            'Authorization': `Bearer ${currentToken.access_token}`,
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
@@ -317,7 +378,7 @@
                     sideB.value = [];
                 }
 
-                return { showSpotifyCredentials, clientID, clientSecret, mixtapeLength, mixtapeTitle, remainingTimeA, remainingTimeB, sideA, sideB, searchQuery, searchResults, saveSpotifyCredentials, addSong, removeSong, moveSong, searchSongs, formattedTime, updateRemainingTime, createMixtapePlaylist };
+                return { showSpotifyCredentials, mixtapeLength, mixtapeTitle, remainingTimeA, remainingTimeB, sideA, sideB, searchQuery, searchResults, loginWithSpotify, addSong, removeSong, moveSong, searchSongs, formattedTime, updateRemainingTime, createMixtapePlaylist };
             }
         }).mount('#app');
     </script>
