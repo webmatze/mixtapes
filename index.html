@@ -58,8 +58,14 @@
                                             </div>
                                             <div class="column is-narrow">
                                                 <div class="buttons are-small">
-                                                    <button class="button is-small is-danger is-outlined" @click="removeSong('A', song)">
-                                                        <span class="icon"><i class="fa fa-times"></i></span> <span>Remove</span>
+                                                    <button class="button is-small" @click="moveSongUp('A', song)">
+                                                        <span class="icon"><i class="fas fa-arrow-up"></i></span>
+                                                    </button>
+                                                    <button class="button is-small" @click="moveSongDown('A', song)">
+                                                        <span class="icon"><i class="fas fa-arrow-down"></i></span>
+                                                    </button>
+                                                    <button class="button is-small is-danger" @click="removeSong('A', song)">
+                                                        <span class="icon"><i class="fa fa-times"></i></span>
                                                     </button>
                                                     <button class="button is-small is-info" @click="moveSong('B', song)">
                                                         <span class="icon"><i class="fas fa-arrow-right"></i></span> <span>Move to B</span>
@@ -83,8 +89,14 @@
                                             </div>
                                             <div class="column is-narrow">
                                                 <div class="buttons are-small">
-                                                    <button class="button is-small is-danger is-outlined" @click="removeSong('B', song)">
-                                                        <span class="icon"><i class="fa fa-times"></i></span> <span>Remove</span>
+                                                    <button class="button is-small" @click="moveSongUp('B', song)">
+                                                        <span class="icon"><i class="fas fa-arrow-up"></i></span>
+                                                    </button>
+                                                    <button class="button is-small" @click="moveSongDown('B', song)">
+                                                        <span class="icon"><i class="fas fa-arrow-down"></i></span>
+                                                    </button>
+                                                    <button class="button is-small is-danger" @click="removeSong('B', song)">
+                                                        <span class="icon"><i class="fa fa-times"></i></span>
                                                     </button>
                                                     <button class="button is-small is-info" @click="moveSong('A', song)">
                                                         <span class="icon"><i class="fas fa-arrow-left"></i></span> <span>Move to A</span>
@@ -364,6 +376,26 @@
                     }
                 }
 
+                function moveSongUp(side, song) {
+                    const sideList = side === 'A' ? sideA.value : sideB.value;
+                    const index = sideList.findIndex(s => s.id === song.id);
+                    if (index > 0) {
+                        const item = sideList[index];
+                        sideList.splice(index, 1);
+                        sideList.splice(index - 1, 0, item);
+                    }
+                }
+
+                function moveSongDown(side, song) {
+                    const sideList = side === 'A' ? sideA.value : sideB.value;
+                    const index = sideList.findIndex(s => s.id === song.id);
+                    if (index !== -1 && index < sideList.length - 1) {
+                        const item = sideList[index];
+                        sideList.splice(index, 1);
+                        sideList.splice(index + 1, 0, item);
+                    }
+                }
+
                 function formattedTime(seconds) {
                     seconds = Math.round(seconds);
                     const min = Math.floor(seconds / 60);
@@ -378,7 +410,7 @@
                     sideB.value = [];
                 }
 
-                return { showSpotifyCredentials, mixtapeLength, mixtapeTitle, remainingTimeA, remainingTimeB, sideA, sideB, searchQuery, searchResults, loginWithSpotify, addSong, removeSong, moveSong, searchSongs, formattedTime, updateRemainingTime, createMixtapePlaylist };
+                return { moveSongUp, moveSongDown, showSpotifyCredentials, mixtapeLength, mixtapeTitle, remainingTimeA, remainingTimeB, sideA, sideB, searchQuery, searchResults, loginWithSpotify, addSong, removeSong, moveSong, searchSongs, formattedTime, updateRemainingTime, createMixtapePlaylist };
             }
         }).mount('#app');
     </script>
