@@ -25,6 +25,16 @@
                     </div>
                 </div>
                 <div id="mixtape" v-else>
+                    <div class="modal is-active" v-if="showModal">
+                        <div class="modal-background"></div>
+                        <div class="modal-content">
+                            <div class="box">
+                                <h3 class="title is-4">Playlists Created Successfully</h3>
+                                <div v-html="modalContent"></div>
+                                <button class="button is-success" @click="closeModal()">Close</button>
+                            </div>
+                        </div>
+                    </div>
                     <h1 class="title">Mixtape Creator</h1>
                     <div class="field">
                         <label for="mixtape-length" class="label">Select Mixtape Length:</label>
@@ -182,6 +192,8 @@
                 const sideB = ref([]);
                 const searchQuery = ref('');
                 const searchResults = ref([]);
+                const showModal = ref(false);
+                const modalContent = ref('');
 
                 const accessToken = ref('');
                 const songs = ref([]);
@@ -304,7 +316,8 @@
                 async function createMixtapePlaylist() {
                     const playlistNames = [`${mixtapeTitle.value} (Mixtape Side A)`, `${mixtapeTitle.value} (Mixtape Side B)`];
                     const playlistIds = [];
-                    const { id: user_id } = await fetchWebApi('v1/me', 'GET')
+                    const playlistLinks = [];
+                    const { id: user_id } = await fetchWebApi('v1/me', 'GET');
 
                     for (const name of playlistNames) {
                         const playlist = await fetchWebApi(`v1/users/${user_id}/playlists`, 'POST', {
@@ -314,12 +327,26 @@
                         });
 
                         playlistIds.push(playlist.id);
+                        playlistLinks.push(`https://open.spotify.com/playlist/${playlist.id}`);
                     }
 
                     await addTracksToPlaylist(playlistIds[0], sideA.value);
                     await addTracksToPlaylist(playlistIds[1], sideB.value);
 
-                    alert('Playlists created successfully: ' + playlistNames);
+                    showModalWithLinks(playlistNames, playlistLinks);
+                }
+
+                function showModalWithLinks(playlistNames, playlistLinks) {
+                    modalContent.value = playlistNames.map((name, index) => 
+                        `<p>${name}: <a href="${playlistLinks[index]}" target="_blank">${playlistLinks[index]}</a></p>`
+                    ).join('');
+
+                    showModal.value = true;
+                }
+
+                function closeModal() {
+                    showModal.value = false;
+                    modalContent.value = '';
                 }
 
                 async function addTracksToPlaylist(playlistId, tracks) {
@@ -398,7 +425,7 @@
                     sideB.value = [];
                 }
 
-                return { moveSongUp, moveSongDown, showSpotifyCredentials, mixtapeLength, mixtapeTitle, remainingTimeA, remainingTimeB, sideA, sideB, searchQuery, searchResults, loginWithSpotify, addSong, removeSong, moveSong, searchSongs, formattedTime, updateRemainingTime, createMixtapePlaylist };
+                return { showModal, modalContent, closeModal, moveSongUp, moveSongDown, showSpotifyCredentials, mixtapeLength, mixtapeTitle, remainingTimeA, remainingTimeB, sideA, sideB, searchQuery, searchResults, loginWithSpotify, addSong, removeSong, moveSong, searchSongs, formattedTime, updateRemainingTime, createMixtapePlaylist };
             }
         }).mount('#app');
     </script>
