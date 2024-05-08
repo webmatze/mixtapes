@@ -18,6 +18,18 @@ To get started with the Mixtape Generator, follow these simple steps:
 4. Once complete, review your mixtape and make any necessary adjustments.
 5. Save your mixtape to revisit it anytime or share it with friends and family.
 
+## Test the App locally
+
+To run the Mixtape Generator locally using a simple Python web server, follow these steps:
+
+1. Ensure you have Python installed on your computer. You can download it from [python.org](https://www.python.org/downloads/).
+2. Open a terminal or command prompt.
+3. Navigate to the directory where your project files are located.
+4. Run the command: `python3 -m http.server 8080`
+5. Open a web browser and visit `http://localhost:8080` to access the app.
+
+This will serve your files on port 8080, and you can access the Mixtape Generator by visiting the provided URL.
+
 ## Why Mixtapes?
 
 Mixtapes hold a special place in the hearts of many. They were a way to express feelings, share favorite tunes, and create memories. With the Mixtape Generator, we aim to keep that tradition alive in a digital age, allowing users to create something personal and meaningful using the convenience of modern technology.
